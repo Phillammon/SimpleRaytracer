@@ -27,7 +27,7 @@ class Scene():
             #print "----------------------------------"
             #print "Tracing ray " + str(xval) +", " + str(yval)
             #print "Direction is " + str(ray.direction.vals[0])+", "+ str(ray.direction.vals[1])+", "+ str(ray.direction.vals[2])
-            self.display.set_at((xval, yval), ray.trace(spheres))
+            self.display.set_at((xval, yval), ray.trace(self.spheres, self.lights))
             if time.time()-lastflip > 0.015:
                 pygame.display.update()
                 lastflip = time.time()
@@ -45,14 +45,34 @@ class Ray():
     def __init__(self, origin, direction):
         self.origin = origin
         self.direction = direction.normalise()
-    def trace(self, spheres):
-        closestSphere = self.nearestCollision(spheres)
-        if closestSphere == None:
+    def trace(self, spheres, lights):
+        #print "Analysing ray-----------------------"
+        closestSphere, collidePoint = self.nearestCollision(spheres)
+        if collidePoint == None:
             return pygame.Color(255, 255, 255, 0)
-        return closestSphere.color
+        if closestSphere == None:
+            closestSphere = Sphere(None, None, pygame.Color(220, 220, 220))
+        collidePoint = self.origin.add(self.direction.multiply(collidePoint))
+        returnColor = pygame.Color(55, 55, 55, 0)
+        #print "Checking shadows"
+        for light in lights:
+            shadowRay = Ray(collidePoint, light.origin.subtract(collidePoint))
+            shadowedBy, shadowedWhen = shadowRay.nearestCollision(spheres)
+            if shadowedBy == None or shadowedWhen <= 0.01:
+                #returnColor = returnColor + closestSphere.color * light.brightness
+                returnColor = closestSphere.color
+            else:
+                returnColor = closestSphere.color - returnColor
+                #print shadowedBy.color
+        return returnColor
     def nearestCollision(self, spheres):
         min_t = None
         closestSphere = None
+        #collide with floor
+        if self.direction.vals[1] != 0:
+            floorhit = -float(self.origin.vals[1])/self.direction.vals[1]
+            if floorhit > 0:
+                min_t = floorhit
         for sphere in spheres:
             collide, t = self.intersect(sphere)
             if collide:
@@ -60,35 +80,33 @@ class Ray():
                     min_t = t
                     closestSphere = sphere
                     #print "New closest sphere"
-                elif t < min_t and t > 0:
+                elif t < min_t:
                     min_t = t
                     closestSphere = sphere
                     #print "New closest sphere"
-                elif t > 0:
-                    #print "Not closest collision"
-                    pass
-                else:
-                    #print "Behind camera"
-                    pass
-        return closestSphere
+        return closestSphere, min_t
     def intersect(self, sphere):
         #print "-- Colliding Sphere --"
-        origins = sphere.origin.subtract(self.origin)
-        closestApproachUnits = origins.dot(self.direction)
-        closestApproachSquare = origins.dot(origins) - (closestApproachUnits * closestApproachUnits)
+        line = sphere.origin.subtract(self.origin)
+        timeClosestApproach = line.dot(self.direction)
+        closestApproachSquare = line.dot(line) - (timeClosestApproach * timeClosestApproach)
         #print closestApproachSquare
         #print sphere.radius * sphere.radius
-        if closestApproachSquare > sphere.radius * sphere.radius:
+        if closestApproachSquare > (sphere.radius * sphere.radius):
             #print "No collision"
             return False, 0
         #print "Collision"
         if closestApproachSquare < 0:
             #floating point errors happen
             closestApproachSquare = 0
-        closestApproach = math.sqrt(closestApproachSquare)
-        if closestApproachUnits - closestApproach > 0:
-            return True, closestApproachUnits - closestApproach
-        return True, closestApproachUnits + closestApproach
+        closestApproach = math.sqrt((sphere.radius * sphere.radius) - closestApproachSquare)
+        if timeClosestApproach - closestApproach >= 0:
+            #print "Took nearest"
+            return True, timeClosestApproach - closestApproach
+        elif timeClosestApproach + closestApproach >= 0:
+            #print "Took furthest"
+            return True, timeClosestApproach + closestApproach
+        return False, 0
         
         
 class Sphere():
@@ -96,6 +114,12 @@ class Sphere():
         self.origin = origin
         self.radius = radius
         self.color = color
+
+class LightSource():
+    def __init__(self, origin, brightness = pygame.Color(255, 255, 255), radius = 0):
+        self.origin = origin
+        self.radius = radius
+        self.brightness = brightness
 
 class Camera():
     def __init__(self, origin, direction, length):
@@ -131,7 +155,10 @@ class Camera():
         
 resolution = (640, 480)        
 spheres = [Sphere(Vector(0, 60, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 60, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 60, 300), 60, pygame.Color(0, 0, 255))]
-lights = [Sphere(Vector(0, 200, 200), 0, pygame.Color(255, 255, 255))]
-camera = Camera(Vector(0, 80, -100), Vector(0, 0, 1), 1)
+#spheres = [Sphere(Vector(0, 0, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 0, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 0, 300), 60, pygame.Color(0, 0, 255))]
+lights = [LightSource(Vector(-100, 200, -100))]
+#camera = Camera(Vector(0, 80, -100), Vector(0, 0, 1), 1)
+camera = Camera(Vector(0, 180, -100), Vector(0, -0.5, 1), 1)
+#camera = Camera(Vector(0, 300, 200), Vector(0, -1, 0), 0.5)
 
 Scene(resolution, spheres, lights, camera).createImage()

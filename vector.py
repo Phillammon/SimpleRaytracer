@@ -19,10 +19,10 @@ class Vector():
     def theta(self, vec2):
         return math.acos(self.dot(vec2)/(self.magnitude()*vec2.magnitude()))
     def add(self, vec2):
-        return Vector(map(lambda (i, j): i+j, zip(self.vals, vec2.vals)))
+        return Vector(map(lambda (i, j): float(i)+j, zip(self.vals, vec2.vals)))
     def subtract(self, vec2):
-        return Vector(map(lambda (i, j): i-j, zip(self.vals, vec2.vals)))
+        return Vector(map(lambda (i, j): float(i)-j, zip(self.vals, vec2.vals)))
     def multiply(self, scalar):
-        return Vector(map(lambda v: v * scalar, self.vals))
+        return Vector(map(lambda v: float(v) * scalar, self.vals))
     def divide(self, scalar):
         return self.multiply(1.0/scalar)

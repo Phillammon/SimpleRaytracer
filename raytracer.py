@@ -3,18 +3,17 @@ import sys
 import math
 import random
 import time
+from vector import *
+from functools import reduce
 
 random.seed()
 
-
 class Scene():
-    def __init__(self, resolution, spheres, planes, lights, viewpoint, image):
+    def __init__(self, resolution, spheres, lights, camera):
         self.res_x, self.res_y = resolution
         self.spheres = spheres
-        self.planes = planes
         self.lights = lights
-        self.viewpoint = viewpoint
-        self.image = image
+        self.camera = camera
         self.showScreen()
     def showScreen(self):
         pygame.display.init()
@@ -24,77 +23,115 @@ class Scene():
             self.checkEvents()
     def createImage(self):
         lastflip = time.time()
-        deltax = self.image.width/self.res_x
-        deltay = 1.0/self.res_y
-        for xval in range(self.res_x):
-            for yval in range(self.res_y):
-                ray = Ray(self, [self.viewpoint.x, self.viewpoint.y, self.viewpoint.z], [self.image.x - (self.res_x/2) +(xval * deltax), self.image.y- (self.res_y/2) +(yval * deltay), self.image.z])
-                self.display.set_at((xval, yval), ray.trace())
-                if time.time()-lastflip > 0.015:
-                    pygame.display.update()
-                    lastflip = time.time()
-                self.checkEvents()
+        for xval, yval, ray in self.camera.rayList(self.res_x, self.res_y):
+            #print "----------------------------------"
+            #print "Tracing ray " + str(xval) +", " + str(yval)
+            #print "Direction is " + str(ray.direction.vals[0])+", "+ str(ray.direction.vals[1])+", "+ str(ray.direction.vals[2])
+            self.display.set_at((xval, yval), ray.trace(spheres))
+            if time.time()-lastflip > 0.015:
+                pygame.display.update()
+                lastflip = time.time()
+            self.checkEvents()
+        #print "Done!"
         pygame.display.update()
         self.wait()
     def checkEvents(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                sys.exit()
-
+                #sys.exit()
+				
+class Ray():
+    def __init__(self, origin, direction):
+        self.origin = origin
+        self.direction = direction.normalise()
+    def trace(self, spheres):
+        closestSphere = self.nearestCollision(spheres)
+        if closestSphere == None:
+            return pygame.Color(255, 255, 255, 0)
+        return closestSphere.color
+    def nearestCollision(self, spheres):
+        min_t = None
+        closestSphere = None
+        for sphere in spheres:
+            collide, t = self.intersect(sphere)
+            if collide:
+                if min_t == None:
+                    min_t = t
+                    closestSphere = sphere
+                    #print "New closest sphere"
+                elif t < min_t and t > 0:
+                    min_t = t
+                    closestSphere = sphere
+                    #print "New closest sphere"
+                elif t > 0:
+                    #print "Not closest collision"
+                    pass
+                else:
+                    #print "Behind camera"
+                    pass
+        return closestSphere
+    def intersect(self, sphere):
+        #print "-- Colliding Sphere --"
+        origins = sphere.origin.subtract(self.origin)
+        closestApproachUnits = origins.dot(self.direction)
+        closestApproachSquare = origins.dot(origins) - (closestApproachUnits * closestApproachUnits)
+        #print closestApproachSquare
+        #print sphere.radius * sphere.radius
+        if closestApproachSquare > sphere.radius * sphere.radius:
+            #print "No collision"
+            return False, 0
+        #print "Collision"
+        if closestApproachSquare < 0:
+            #floating point errors happen
+            closestApproachSquare = 0
+        closestApproach = math.sqrt(closestApproachSquare)
+        if closestApproachUnits - closestApproach > 0:
+            return True, closestApproachUnits - closestApproach
+        return True, closestApproachUnits + closestApproach
+        
+        
 class Sphere():
-    def __init__(self, x, y, z, radius, color):
-        self.x = x
-        self.y = y
-        self.z = z
+    def __init__(self, origin, radius, color):
+        self.origin = origin
         self.radius = radius
         self.color = color
 
-class Plane():
-    def __init__(self, x=None, y=None, z = None, color = pygame.Color(255, 255, 255, 0)):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.color = color
+class Camera():
+    def __init__(self, origin, direction, length):
+        self.origin = origin
+        self.direction = direction.normalise()
+        self.imgorigin = self.origin.add(self.direction.multiply(length))
+        if self.direction.vals[2] != 0:
+            xz = self.direction.vals[0] / self.direction.vals[2]
+            if xz == 0:
+                self.imgdown = Vector(1, 0, 0).cross(self.direction)
+            else:
+                xznr = -1.0 / xz
+                self.imgdown = Vector(xznr, 0, 1).cross(self.direction)
+        else:
+            self.imgdown = Vector(0, 0, 1).cross(self.direction)
+        imgup = Vector(0, 0, 0).subtract(self.imgdown)
+        self.imgright = imgup.cross(self.direction)
+    def rayList(self, res_x, res_y):
+        returnlist = []
+        deltax = self.imgright.normalise().divide(res_x)
+        deltay = self.imgdown.normalise().divide(res_x)
+        topleft = self.imgorigin.subtract(deltax.multiply(res_x/2))
+        topleft = topleft.subtract(deltay.multiply(res_y/2))
+        #print str(deltax.vals[0]) + "," + str(deltax.vals[1]) + "," + str(deltax.vals[2])
+        #print str(deltay.vals[0]) + "," + str(deltay.vals[1]) + "," + str(deltay.vals[2])
+        for xval in range(res_x):
+            for yval in range(res_y):
+                pointb = topleft.add(deltax.multiply(xval))
+                pointb = pointb.add(deltay.multiply(yval))
+                returnlist.append([xval, yval, Ray(self.origin, pointb.subtract(self.origin))])
+        return returnlist
 
-class LightSource():
-    def __init__(self, x=None, y=None, z = None):
-        self.x = x
-        self.y = y
-        self.z = z
         
-class Image():
-    def __init__(self, x, y, z, width):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.width = width
-        
-class Viewpoint():
-    def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
-        
-class Ray():
-    def __init__(self, scene, point_a, point_b):
-        self.scene = scene
-        self.position = point_a
-        self.delta = self.normalise([a - b for a, b in zip(point_a, point_b)])
-    def magnitude(self, vector):
-        return math.sqrt(sum(vector[i]*vector[i] for i in range(len(vector))))
-    def normalise(self, vector):
-        m=self.magnitude(vector)
-        return [val/m for val in vector]
-    def trace(self):
-        return pygame.Color(random.randrange(255),random.randrange(255),random.randrange(255),0)
-        
+resolution = (640, 480)        
+spheres = [Sphere(Vector(0, 60, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 60, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 60, 300), 60, pygame.Color(0, 0, 255))]
+lights = [Sphere(Vector(0, 200, 200), 0, pygame.Color(255, 255, 255))]
+camera = Camera(Vector(0, 80, -100), Vector(0, 0, 1), 1)
 
-resolution = (640, 480)
-spheres = [Sphere(0, 60, 200, 60, pygame.Color(255,0,0,0)),Sphere(50, 60, 150, 60, pygame.Color(0,255,0,0)),Sphere(100, 60, 100, 60, pygame.Color(0,0,255,0))]
-planes = [Plane(y = 0, color = pygame.Color(180,180,180,0)), Plane(y = 250), Plane(z = 250), Plane(z = -100), Plane(x = -100), Plane(x = 200)]
-lights = [LightSource(50, 200, 150)]
-viewpoint = Viewpoint(50, 100, 0)
-image = Image(50, 100, 10, 6.4)
-        
-Scene(resolution, spheres, planes, lights, viewpoint, image).createImage()
+Scene(resolution, spheres, lights, camera).createImage()

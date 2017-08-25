@@ -51,12 +51,14 @@ class Ray():
         if collidePoint == None:
             return pygame.Color(255, 255, 255, 0)
         if closestSphere == None:
-            closestSphere = Sphere(None, None, pygame.Color(220, 220, 220))
+            closestSphere = Sphere(Vector(0, -1, 0), None, pygame.Color(220, 220, 220))
         collidePoint = self.origin.add(self.direction.multiply(collidePoint))
         returnColor = pygame.Color(55, 55, 55, 0)
         #print "Checking shadows"
+        normal = collidePoint.subtract(closestSphere.origin).normalise()
         for light in lights:
-            shadowRay = Ray(collidePoint, light.origin.subtract(collidePoint))
+            #shadowRay = Ray(collidePoint, light.origin.subtract(collidePoint))
+            shadowRay = Ray(collidePoint.add(normal.multiply(0.01)), light.origin.subtract(collidePoint))
             shadowedBy, shadowedWhen = shadowRay.nearestCollision(spheres)
             if shadowedBy == None or shadowedWhen <= 0.01:
                 #returnColor = returnColor + closestSphere.color * light.brightness
@@ -96,9 +98,9 @@ class Ray():
             #print "No collision"
             return False, 0
         #print "Collision"
-        if closestApproachSquare < 0:
+        #if closestApproachSquare < 0:
             #floating point errors happen
-            closestApproachSquare = 0
+        #    closestApproachSquare = 0
         closestApproach = math.sqrt((sphere.radius * sphere.radius) - closestApproachSquare)
         if timeClosestApproach - closestApproach >= 0:
             #print "Took nearest"
@@ -156,9 +158,9 @@ class Camera():
 resolution = (640, 480)        
 spheres = [Sphere(Vector(0, 60, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 60, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 60, 300), 60, pygame.Color(0, 0, 255))]
 #spheres = [Sphere(Vector(0, 0, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 0, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 0, 300), 60, pygame.Color(0, 0, 255))]
-lights = [LightSource(Vector(-100, 200, -100))]
-#camera = Camera(Vector(0, 80, -100), Vector(0, 0, 1), 1)
-camera = Camera(Vector(0, 180, -100), Vector(0, -0.5, 1), 1)
+lights = [LightSource(Vector(-100, 200, -50))]
+camera = Camera(Vector(0, 80, -100), Vector(0, 0, 1), 1)
+#camera = Camera(Vector(0, 180, -100), Vector(0, -0.5, 1), 1)
 #camera = Camera(Vector(0, 300, 200), Vector(0, -1, 0), 0.5)
 
 Scene(resolution, spheres, lights, camera).createImage()

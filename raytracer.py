@@ -45,28 +45,39 @@ class Ray():
     def __init__(self, origin, direction):
         self.origin = origin
         self.direction = direction.normalise()
-    def trace(self, spheres, lights):
+    def trace(self, spheres, lights, recursion = 0):
+        if recursion > 15:
+            return pygame.Color(255, 255, 255, 0)
         #print "Analysing ray-----------------------"
         closestSphere, collidePoint = self.nearestCollision(spheres)
         if collidePoint == None:
             return pygame.Color(255, 255, 255, 0)
-        if closestSphere == None:
-            closestSphere = Sphere(Vector(0, -1, 0), None, pygame.Color(220, 220, 220))
         collidePoint = self.origin.add(self.direction.multiply(collidePoint))
-        returnColor = pygame.Color(55, 55, 55, 0)
-        #print "Checking shadows"
-        normal = collidePoint.subtract(closestSphere.origin).normalise()
-        for light in lights:
-            #shadowRay = Ray(collidePoint, light.origin.subtract(collidePoint))
-            shadowRay = Ray(collidePoint.add(normal.multiply(0.01)), light.origin.subtract(collidePoint))
-            shadowedBy, shadowedWhen = shadowRay.nearestCollision(spheres)
-            if shadowedBy == None or shadowedWhen <= 0.01:
-                #returnColor = returnColor + closestSphere.color * light.brightness
-                returnColor = closestSphere.color
-            else:
-                returnColor = closestSphere.color - returnColor
-                #print shadowedBy.color
-        return returnColor
+        if closestSphere == None:
+            closestSphere = Sphere(collidePoint.subtract(Vector(0,1,0)), 1, pygame.Color(220, 220, 220), False)
+        if not closestSphere.specular:
+            returnColor = pygame.Color(55, 55, 55, 0)
+            #print "Checking shadows"
+            normal = collidePoint.subtract(closestSphere.origin).normalise()
+            for light in lights:
+                #shadowRay = Ray(collidePoint, light.origin.subtract(collidePoint))
+                shadowRay = Ray(collidePoint.add(normal.multiply(0.01)), light.origin.subtract(collidePoint))
+                shadowedBy, shadowedWhen = shadowRay.nearestCollision(spheres)
+                if shadowedBy == None or shadowedWhen <= 0.01:
+                    #returnColor = returnColor + closestSphere.color * light.brightness
+                    returnColor = closestSphere.color
+                else:
+                    returnColor = closestSphere.color - returnColor
+                    #print shadowedBy.color
+            return returnColor
+        else:
+            normal = collidePoint.subtract(closestSphere.origin).normalise()
+            scalar = normal.dot(self.direction)
+            newDirection = normal.multiply(2*scalar)
+            newDirection = newDirection.subtract(self.direction)
+            newDirection = Vector(0,0,0).subtract(newDirection)
+            return Ray(collidePoint.add(normal.multiply(0.01)), newDirection).trace(spheres, lights, recursion+1) - pygame.Color(20, 20, 20, 0)
+            
     def nearestCollision(self, spheres):
         min_t = None
         closestSphere = None
@@ -112,10 +123,11 @@ class Ray():
         
         
 class Sphere():
-    def __init__(self, origin, radius, color):
+    def __init__(self, origin, radius, color, specular = False):
         self.origin = origin
         self.radius = radius
         self.color = color
+        self.specular = specular
 
 class LightSource():
     def __init__(self, origin, brightness = pygame.Color(255, 255, 255), radius = 0):
@@ -156,11 +168,13 @@ class Camera():
 
         
 resolution = (640, 480)        
-spheres = [Sphere(Vector(0, 60, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 60, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 60, 300), 60, pygame.Color(0, 0, 255))]
+spheres = [Sphere(Vector(0, 60, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 60, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 60, 300), 60, pygame.Color(0, 0, 255), True)]
+
+spheres = [Sphere(Vector(0,120,100), 60, None, True), Sphere(Vector(0,40,200), 40, pygame.Color(255,0,0)), Sphere(Vector(0,40,0), 40, pygame.Color(0,255,255)), Sphere(Vector(100,40,130), 40, pygame.Color(255,255,0)), Sphere(Vector(100,40,70), 40, pygame.Color(0,255,0)), Sphere(Vector(-100,40,130), 40, pygame.Color(255,0,255)), Sphere(Vector(-100,40,70), 40, pygame.Color(0,0,255))]
 #spheres = [Sphere(Vector(0, 0, 100), 60, pygame.Color(255, 0, 0)), Sphere(Vector(-60, 0, 200), 60, pygame.Color(0, 255, 0)), Sphere(Vector(120, 0, 300), 60, pygame.Color(0, 0, 255))]
 lights = [LightSource(Vector(-100, 200, -50))]
-camera = Camera(Vector(0, 80, -100), Vector(0, 0, 1), 1)
-#camera = Camera(Vector(0, 180, -100), Vector(0, -0.5, 1), 1)
+#camera = Camera(Vector(0, 80, -100), Vector(0, 0, 1), 1)
+camera = Camera(Vector(0, 180, -150), Vector(0, -0.5, 1), 1)
 #camera = Camera(Vector(0, 300, 200), Vector(0, -1, 0), 0.5)
 
 Scene(resolution, spheres, lights, camera).createImage()

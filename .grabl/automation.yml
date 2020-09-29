@@ -1,0 +1,5 @@
+build:
+  quality:
+      test-job:
+        machine: graknlabs-ubuntu-20.04
+        script: echo Hello

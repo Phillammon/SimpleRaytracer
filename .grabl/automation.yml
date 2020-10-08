@@ -3,3 +3,7 @@ build:
       test-job:
         machine: graknlabs-ubuntu-20.04
         script: echo Hello
+		echo This is going to cause an error
+		echo On the next line, which is line 4 of the script
+		jfgkoasjgsfakgopfas
+		echo We shouldn't get here

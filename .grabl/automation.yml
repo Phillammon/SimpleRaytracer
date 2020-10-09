@@ -5,6 +5,6 @@ build:
         script: |
           for i in {1..300}
           do
-            echo "Welcome but this is an extremely long line that goes beyond default console width just in case to test that $i times"
+            echo "padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding Welcome but this is an extremely long line that goes beyond default console width just in case to test that $i times"
             sleep 0.1s
           done

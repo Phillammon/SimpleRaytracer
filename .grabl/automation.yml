@@ -3,8 +3,8 @@ build:
       test-job:
         machine: graknlabs-ubuntu-20.04
         script: |
-          for i in {1..300}
+          for i in {1..30}
           do
-            echo "padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding Welcome but this is an extremely long line that goes beyond default console width just in case to test that $i times"
+            echo "$i iterations complete"
             sleep 0.1s
           done

@@ -10,3 +10,12 @@ build:
             echo "$i iterations complete"
             sleep 0.1s
           done
+release: 
+  filter:
+    owner: Phillammon
+    branch: master
+  validation:
+    job:
+      machine: graknlabs-ubuntu-20.04
+      script: |
+        echo Released!

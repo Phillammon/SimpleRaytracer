@@ -19,3 +19,8 @@ release:
       machine: graknlabs-ubuntu-20.04
       script: |
         echo Released!
+  deployment:
+    job:
+      machine: graknlabs-ubuntu-20.04
+      script: |
+        echo Released!

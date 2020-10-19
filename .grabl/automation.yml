@@ -10,6 +10,11 @@ build:
             echo "$i iterations complete"
             sleep 0.1s
           done
+  performance:
+    job-that-should-fail:
+      machine: graknlabs-ubuntu-20.04
+      script: thiscommandisnotlegal
+
 release: 
   filter:
     owner: Phillammon

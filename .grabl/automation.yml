@@ -13,7 +13,7 @@ build:
   performance:
     job-that-should-fail:
       machine: graknlabs-ubuntu-20.04
-      script: thiscommandisnotlegal
+      script: echo Performs!
 
 release: 
   filter:
@@ -23,7 +23,7 @@ release:
     job:
       machine: graknlabs-ubuntu-20.04
       script: |
-        echo Released!
+        echo Validated!
   deployment:
     job:
       machine: graknlabs-ubuntu-20.04

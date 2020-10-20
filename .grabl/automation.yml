@@ -13,17 +13,3 @@ build:
       machine: graknlabs-ubuntu-20.04
       script: echo Performs!
 
-release: 
-  filter:
-    owner: Phillammon
-    branch: master
-  validation:
-    job:
-      machine: graknlabs-ubuntu-20.04
-      script: |
-        echo Validated!
-  deployment:
-    job:
-      machine: graknlabs-ubuntu-20.04
-      script: |
-        echo Released!

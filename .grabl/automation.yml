@@ -1,3 +1,5 @@
+config:
+  version-candidate: VERSION
 build:
   quality:
       test-job:
@@ -8,8 +10,17 @@ build:
             echo "$i iterations complete"
             sleep 0.1s
           done
-  performance:
-    job-that-should-fail:
+release: 
+  filter:
+    owner: Phillammon
+    branch: master
+  validation:
+    job:
       machine: graknlabs-ubuntu-20.04
-      script: echo Performs!
-
+      script: |
+        echo Released!
+  deployment:
+    job:
+      machine: graknlabs-ubuntu-20.04
+      script: |
+        echo Released!
